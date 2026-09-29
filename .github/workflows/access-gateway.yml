@@ -1,0 +1,30 @@
+name: Access Gateway
+on:
+  push:
+    paths: ["gateway/**", ".github/workflows/access-gateway.yml"]
+  pull_request:
+    paths: ["gateway/**", ".github/workflows/access-gateway.yml"]
+permissions:
+  contents: read
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: gateway
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v6
+        with:
+          go-version-file: gateway/go.mod
+          cache-dependency-path: gateway/go.sum
+      - run: go vet ./...
+      - run: go test -race ./...
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: gateway/web/package-lock.json
+      - run: npm ci --no-audit --no-fund && npm run build
+        working-directory: gateway/web
+      - run: REMOTE_DOMAIN=remote.example.com docker compose -f deploy/compose.yaml config --quiet

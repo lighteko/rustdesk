@@ -1,0 +1,7 @@
+*.db
+*.db-shm
+*.db-wal
+config.json
+/web/node_modules/
+/web/dist/
+/client/

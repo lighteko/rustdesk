@@ -1,0 +1,21 @@
+{
+  "listen": "127.0.0.1:8080",
+  "origin": "http://localhost:8080",
+  "database": "gateway.db",
+  "public_dir": "web/dist",
+  "client_dir": "",
+  "bootstrap_token_env": "RD_BOOTSTRAP_TOKEN",
+  "id_upstream": "ws://hbbs:21118",
+  "relay_upstream": "ws://hbbr:21119",
+  "server_key": "",
+  "enable_rustdesk_proxy": false,
+  "devices": [
+    {
+      "id": "main-pc",
+      "name": "Main PC",
+      "os": "Windows 11",
+      "rustdesk_id": "REPLACE_WITH_HOST_ID",
+      "heartbeat_token_env": "RD_MAIN_PC_HEARTBEAT_TOKEN"
+    }
+  ]
+}
