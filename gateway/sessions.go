@@ -222,14 +222,14 @@ func (s *Server) revokeAllLocked() error {
 }
 
 func (s *Server) invalidateOwnerLocked(owner string) error {
+	if owner == "" {
+		return nil
+	}
 	delete(s.auth, owner)
 	for k, v := range s.ceremonies {
 		if v.Owner == owner {
 			delete(s.ceremonies, k)
 		}
-	}
-	if owner == "" {
-		return nil
 	}
 	values, err := s.activeSessionsLocked(owner)
 	if err != nil {

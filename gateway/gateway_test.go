@@ -225,6 +225,16 @@ func TestPasskeyRejectsMissingUVReplayAndTampering(t *testing.T) {
 	expect(t, b.request("GET", "/api/me", nil, nil), 401)
 }
 
+func TestAnonymousLogoutPreservesAnotherBrowserChallenge(t *testing.T) {
+	s := newTestServer(t)
+	b := newBrowser(t, s)
+	b.enroll()
+	challenge := challengeValue(t, b.request("POST", "/api/auth/passkey/challenge", map[string]string{"purpose": "login"}, nil))
+	other := newBrowser(t, s)
+	expect(t, other.request("POST", "/api/logout", nil, nil), 204)
+	expect(t, b.request("POST", "/api/auth/passkey/verify", b.assertion(challenge, true), nil), 200)
+}
+
 type upstreamFixture struct {
 	ID       string
 	Relay    string
