@@ -1,0 +1,54 @@
+services:
+  caddy:
+    image: caddy:2-alpine
+    restart: unless-stopped
+    ports: ["80:80", "443:443"]
+    environment:
+      REMOTE_DOMAIN: ${REMOTE_DOMAIN:?Set the public HTTPS domain}
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy-data:/data
+      - caddy-config:/config
+    networks:
+      edge:
+        ipv4_address: 172.30.80.2
+
+  gateway:
+    build: ..
+    restart: unless-stopped
+    environment:
+      RD_BOOTSTRAP_TOKEN: ${RD_BOOTSTRAP_TOKEN:-}
+      RD_MAIN_PC_HEARTBEAT_TOKEN: ${RD_MAIN_PC_HEARTBEAT_TOKEN:-}
+    volumes:
+      - ./config.json:/app/config.json:ro
+      - gateway-data:/data
+    networks: [edge, rustdesk]
+    depends_on: [hbbs, hbbr]
+
+  hbbs:
+    image: rustdesk/rustdesk-server:1.1.16
+    command: hbbs -r hbbr:21117
+    restart: unless-stopped
+    environment:
+      ALWAYS_USE_RELAY: "Y"
+    volumes: ["rustdesk-data:/root"]
+    networks: [rustdesk]
+
+  hbbr:
+    image: rustdesk/rustdesk-server:1.1.16
+    command: hbbr
+    restart: unless-stopped
+    volumes: ["rustdesk-data:/root"]
+    networks: [rustdesk]
+
+networks:
+  edge:
+    ipam:
+      config: [{subnet: 172.30.80.0/24}]
+  rustdesk:
+    internal: true
+volumes:
+  caddy-data:
+  caddy-config:
+  gateway-data:
+  rustdesk-data:
