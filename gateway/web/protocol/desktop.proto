@@ -1,0 +1,48 @@
+// Wire subset of libs/base/protos/message.proto and
+// libs/hbb_common/protos/rendezvous.proto at a7f2260203befb7e9c70b585219f0f0b5ca57703.
+// See gateway/docs/web-client.md for provenance and compatibility limits.
+syntax = "proto3";
+package hbb;
+
+message IdPk { string id = 1; bytes pk = 2; string dtls_fingerprint = 3; uint32 kx_version = 4; }
+message PunchHoleRequest {
+  string id = 1; int32 nat_type = 2; string licence_key = 3;
+  int32 conn_type = 4; string version = 6; bool force_relay = 8;
+}
+message PunchHoleResponse { bytes pk = 2; int32 failure = 3; string relay_server = 4; string other_failure = 7; }
+message RequestRelay { string id = 1; string uuid = 2; bool secure = 5; string licence_key = 6; int32 conn_type = 7; }
+message RelayResponse { string uuid = 2; string relay_server = 3; string id = 4; bytes pk = 5; string refuse_reason = 6; string version = 7; }
+message RendezvousMessage { oneof union { PunchHoleRequest punch_hole_request = 8; PunchHoleResponse punch_hole_response = 11; RequestRelay request_relay = 18; RelayResponse relay_response = 19; } }
+message SignedId { bytes id = 1; }
+message PublicKey { bytes asymmetric_value = 1; bytes symmetric_value = 2; uint32 kx_version = 3; }
+message Hash { string salt = 1; string challenge = 2; }
+message DisplayInfo { sint32 x = 1; sint32 y = 2; int32 width = 3; int32 height = 4; string name = 5; bool online = 6; bool cursor_embedded = 7; }
+message PeerInfo { string username = 1; string hostname = 2; string platform = 3; repeated DisplayInfo displays = 4; int32 current_display = 5; string version = 7; }
+message LoginResponse { oneof union { string error = 1; PeerInfo peer_info = 2; } }
+message SupportedDecoding { int32 ability_vp9 = 1; int32 prefer = 4; int32 ability_vp8 = 5; }
+message OptionMessage {
+  int32 image_quality = 1; int32 show_remote_cursor = 3;
+  int32 disable_audio = 7; int32 disable_clipboard = 8;
+  int32 enable_file_transfer = 9; SupportedDecoding supported_decoding = 10;
+  int32 custom_fps = 11;
+}
+message LoginRequest {
+  string username = 1; bytes password = 2; string my_id = 4; string my_name = 5;
+  OptionMessage option = 6; bool video_ack_required = 9; string version = 11; string my_platform = 13;
+}
+message TestDelay { int64 time = 1; bool from_client = 2; uint32 last_delay = 3; uint32 target_bitrate = 4; }
+message EncodedVideoFrame { bytes data = 1; bool key = 2; int64 pts = 3; }
+message EncodedVideoFrames { repeated EncodedVideoFrame frames = 1; }
+message VideoFrame { oneof union { EncodedVideoFrames vp9s = 6; EncodedVideoFrames vp8s = 12; } int32 display = 14; }
+message MouseEvent { int32 mask = 1; sint32 x = 2; sint32 y = 3; repeated int32 modifiers = 4; }
+message KeyEvent { bool down = 1; bool press = 2; oneof union { int32 control_key = 3; uint32 chr = 4; uint32 unicode = 5; string seq = 6; } repeated int32 modifiers = 8; int32 mode = 9; }
+message SwitchDisplay { int32 display = 1; sint32 x = 2; sint32 y = 3; int32 width = 4; int32 height = 5; }
+message PermissionInfo { int32 permission = 1; bool enabled = 2; }
+message Misc { oneof union { SwitchDisplay switch_display = 5; PermissionInfo permission_info = 6; OptionMessage option = 7; string close_reason = 9; bool refresh_video = 10; bool video_received = 12; } }
+message Message {
+  oneof union {
+    SignedId signed_id = 3; PublicKey public_key = 4; TestDelay test_delay = 5;
+    VideoFrame video_frame = 6; LoginRequest login_request = 7; LoginResponse login_response = 8;
+    Hash hash = 9; MouseEvent mouse_event = 10; KeyEvent key_event = 15; Misc misc = 19;
+  }
+}

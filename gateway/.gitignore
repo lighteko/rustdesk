@@ -5,3 +5,5 @@ config.json
 /web/node_modules/
 /web/dist/
 /client/
+/web/src/remote/generated/
+/.integration/

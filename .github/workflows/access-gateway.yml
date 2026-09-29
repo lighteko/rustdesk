@@ -25,6 +25,6 @@ jobs:
           node-version: 22
           cache: npm
           cache-dependency-path: gateway/web/package-lock.json
-      - run: npm ci --no-audit --no-fund && npm run build
+      - run: npm ci --no-audit --no-fund && npm run build && npm test
         working-directory: gateway/web
       - run: REMOTE_DOMAIN=remote.example.com docker compose -f deploy/compose.yaml config --quiet

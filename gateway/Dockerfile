@@ -18,6 +18,7 @@ RUN apk add --no-cache ca-certificates && adduser -D -u 10001 gateway && mkdir /
 WORKDIR /app
 COPY --from=backend /gateway /app/gateway
 COPY --from=portal /portal/dist /app/web/dist
+COPY --from=portal /client /app/client
 USER gateway
 EXPOSE 8080
 ENTRYPOINT ["/app/gateway", "-config", "/app/config.json"]

@@ -4,7 +4,7 @@
 
 PC방 PC에서 Afterplay Benchmark가 GPU/CPU를 사용하는 동안 같은 PC의 브라우저로 Main PC를 제어하는 사용 사례를 목표로 합니다. 벤치마크와 원격 PC 작업은 각각의 PC에서 실행됩니다.
 
-**현재 구현은 인증·세션·연결 정책 기반입니다. 실제 RustDesk 화면/입력 클라이언트는 아직 포함되어 있지 않으며, v0.1의 전체 성공 기준을 달성한 상태가 아닙니다.** 기본 설정에서는 원격 WebSocket 프록시와 Connect 버튼을 비활성화합니다. 테스트는 실제 WebAuthn 서명과 로컬 WebSocket upstream을 사용하지만 실제 RustDesk Host의 화면 전송을 검증하지는 않습니다.
+**현재 구현에는 RustDesk 웹 화면/입력 어댑터가 포함되어 있지만, 실제 Host의 화면·입력·만료까지 이어지는 실기기 검증과 무인 Host 인증은 완료되지 않았습니다. v0.1의 전체 성공 기준을 달성한 상태가 아닙니다.** 기본 설정에서는 원격 WebSocket 프록시와 Connect 버튼을 비활성화합니다.
 
 ## 구현된 기능
 
@@ -20,7 +20,8 @@ PC방 PC에서 Afterplay Benchmark가 GPU/CPU를 사용하는 동안 같은 PC�
 - 기존 양방향 WebSocket을 TTL, 수동 종료, 로그아웃, 전체 종료 시 강제 종료.
 - 재시작 시 이전 활성 세션 폐기. 자동 연장 없음.
 - Rate limit, 정확한 Origin 검사, CSP, 기본 Clipboard/파일 전송 차단 정책.
-- React 포털, 남은 시간/경고/전체화면/종료 UI와 로컬 웹 어댑터 인터페이스.
+- React 포털, 남은 시간/경고/전체화면/종료 UI와 로컬 웹 어댑터.
+- RustDesk ID/Relay WebSocket 연결, Host 공개키 검증과 peer 간 암호화, VP8/VP9 화면 디코딩, 키보드/마우스 입력. 현재 Host 인증은 수동 승인이 필요합니다.
 
 ## 로컬 실행
 
@@ -40,7 +41,7 @@ $env:RD_BOOTSTRAP_TOKEN = [Convert]::ToBase64String($taskBootstrap)
 go run ./cmd/gateway -config config.json
 ```
 
-`http://localhost:8080`을 열고 신뢰할 수 있는 기기에서 최초 소유자 설정을 진행합니다. 토큰은 다른 터미널로 전달하거나 안전하게 조회하여 직접 입력하세요. 토큰을 소스, URL, 로그에 기록하지 마세요. 소유자 Passkey가 한 개 등록되면 bootstrap 엔드포인트는 자동으로 거절합니다. 이후 `RD_BOOTSTRAP_TOKEN`을 제거하고 재시작할 수 있습니다. 추가 Passkey/복구 기능은 아직 없습니다.
+`http://localhost:8080`을 열고 신뢰할 수 있는 기기에서 최초 소유자 설정을 진행합니다. 토큰은 다른 터미널로 전달하거나 안전하게 조회하여 직접 입력하세요. 토큰을 소스, URL, 로그에 기록하지 마세요. 소유자 Passkey가 한 개 등록되면 bootstrap 엔드포인트는 자동으로 거절합니다. 이후 `RD_BOOTSTRAP_TOKEN`을 제거하고 재시작할 수 있습니다. 추가 Passkey/복구 기능은 아직 없습니다. 빌드된 어댑터는 `gateway/client/adapter.js`와 같은 origin의 `ogv/` 자산에 생성됩니다. 로컬 실험에서 연결 기능을 켜려면 `client_dir`를 `client`, `enable_rustdesk_proxy`를 `true`로 명시하고, 사설 RustDesk upstream과 Host 설정을 별도로 준비해야 합니다.
 
 실제 휴대폰 등록과 로그인은 동일한 production RP 도메인에서 HTTPS로 검증해야 합니다. localhost 데모만으로 휴대폰 cross-device 인증이 검증되지는 않습니다. 브라우저·OS·휴대폰과 BLE 근접성 지원에 따라 QR 인증 지원이 달라질 수 있으므로 Chrome/Edge/Firefox 각각 실기기 검증이 필요합니다. 임의의 PC가 WebAuthn을 지원한다는 사실만으로 QR 인증까지 보장되지는 않습니다.
 
@@ -81,7 +82,7 @@ Compose의 사설 Docker 네트워크만으로 다른 네트워크에 있는 Hos
 
 실제 Host에서는 public RustDesk 서버 fallback, direct IP access, LAN discovery, P2P 경로를 차단해야 합니다. Host 방화벽은 허가된 사설 RustDesk 경로만 허용하도록 구성합니다. `direct-server=N`, `enable-lan-discovery=N`, `enable-clipboard=N`, `enable-file-transfer=N`, `enable-terminal=N` 등의 권한을 Host에서도 강제해야 합니다. 암호화된 Relay payload의 Clipboard나 파일 메시지는 Gateway에서 읽을 수 없으므로 UI 토글만으로 정책을 보장할 수 없습니다. 현재 Clipboard 활성화는 제공하지 않습니다.
 
-Gateway의 capability를 활성화하려면 검토된 로컬 웹 클라이언트의 `adapter.js`가 필요합니다. 단순히 `enable_rustdesk_proxy=true`로 바꾸는 것만으로 화면 제어가 구현되는 것은 아닙니다. 현재 필터는 pinned protobuf의 plaintext OSS signaling만 허용하고 알 수 없는 메시지/암호화된 signaling/ICE를 거절합니다. 실제 RustDesk 버전과 호환성을 확인하기 전까지 기본 비활성 상태를 유지하세요.
+Gateway의 capability를 활성화하려면 빌드된 `client/adapter.js`와 사설 RustDesk upstream이 모두 필요합니다. Docker 이미지에는 어댑터가 `/app/client`로 포함되지만 예시 설정의 `client_dir`와 `enable_rustdesk_proxy`는 비활성 상태입니다. 현재 필터는 pinned protobuf의 plaintext OSS signaling만 허용하고 알 수 없는 메시지/암호화된 signaling/ICE를 거절합니다. MacBook Host와의 사설 시험에서 암호화된 peer handshake 및 Host 연결 관리자까지 도달했으나 승인 창이 보이지 않아 실제 화면과 입력은 확인하지 못했습니다. 이 시험은 목표 사용 방향인 MacBook 브라우저 → Windows Host와 반대였으므로 전체 성공 근거로 사용하지 않습니다. 현재 웹 어댑터는 Host의 수동 승인에 의존하므로 무인 Main PC 접속 요건도 아직 충족하지 않습니다.
 
 ## 검증
 
@@ -90,17 +91,18 @@ go test ./...
 go vet ./...
 cd web
 npm run build
+npm test
 ```
 
-서명된 P-256 WebAuthn 등록/로그인, UV 누락, 변조, replay, PC별 grant와 일회성 소비, URL 유출/Origin/다른 PC 거절, ICE/파일 연결 거절, Relay ticket 재사용 거절, 이미 열린 idle 연결의 종료, 재시작 폐기를 검증합니다. GitHub CI는 Linux에서 `go test -race`도 실행하도록 구성했습니다. 로컬 Windows에는 CGo C 컴파일러가 없어 race 검사를 실행하지 못했습니다. Docker Compose 설정 문법은 확인했지만 로컬 Docker 엔진이 꺼져 있어 컨테이너 빌드는 검증하지 못했습니다.
+서명된 P-256 WebAuthn 등록/로그인, UV 누락, 변조, replay, PC별 grant와 일회성 소비, URL 유출/Origin/다른 PC 거절, ICE/파일 연결 거절, Relay ticket 재사용 거절, 이미 열린 idle 연결의 종료, 재시작 폐기를 검증합니다. 웹 테스트는 Gateway URL 고정, Host 서명 검증, 암호화 키 교환, 양방향 패킷, replay 거절과 abort 정리를 검증합니다. GitHub CI는 Linux에서 `go test -race`도 실행하도록 구성했습니다. 로컬 Windows에는 CGo C 컴파일러가 없어 race 검사를 실행하지 못했습니다. Docker Desktop 시작 오류로 이번 변경의 컨테이너 빌드와 실기기 화면/입력은 검증하지 못했습니다.
 
 `govulncheck`는 실제 호출하는 코드/패키지에서 알려진 취약점을 찾지 않았습니다. 간접 의존성 `golang.org/x/crypto`의 사용하지 않는 `openpgp` 패키지에 대해 `GO-2026-5932` 모듈 경고는 표시됩니다. 배포되는 React 의존성의 `npm audit --omit=dev`도 통과했습니다.
 
 ## 다음 단계와 성공 조건
 
-1. [공개 웹 클라이언트 복원 메모](docs/web-client.md)에 따라 소스·codec 자산·라이선스를 확인하고 자체 포털 어댑터 구현.
-2. 원격 Host의 격리 경로와 준비 상태 heartbeat Agent 구현. Host 인증과 Clipboard/파일 권한 강제.
-3. 실제 Windows Host → 브라우저 화면, 키보드, 마우스, 전체화면을 검증.
+1. Windows Host를 사설 RustDesk 서버에 연결하고 Host 준비 상태 heartbeat Agent를 구현. Host의 공개 서버 fallback과 직접 연결 경로를 차단.
+2. Host 수동 승인 대신 Remote Access Session에 묶인 무인 인증을 구현하고 Clipboard/파일 권한을 Host에서 강제.
+3. MacBook **브라우저** → Gateway → Windows Host의 실제 화면, 키보드, 마우스, 전체화면, 만료 종료를 검증.
 4. 새 Windows PC의 Chrome/Edge/Firefox와 휴대폰 Passkey로 설치 없이 접속하고, 약 5초 내 화면 표시와 15분 만료 시 강제 종료를 측정.
 
 휴대폰 접속 알림, TOTP, 추가 credential/복구, 관리자 Console, 다중 사용자/RBAC, 파일 전송, Clipboard opt-in, SSH, 녹화, 공유/초대 링크, 모바일 전용 UI는 후속 범위입니다. 알림을 발송하는 외부 서비스는 아직 연결하지 않았습니다.

@@ -3,7 +3,7 @@
   "origin": "http://localhost:8080",
   "database": "gateway.db",
   "public_dir": "web/dist",
-  "client_dir": "",
+  "client_dir": "client",
   "bootstrap_token_env": "RD_BOOTSTRAP_TOKEN",
   "id_upstream": "ws://hbbs:21118",
   "relay_upstream": "ws://hbbr:21119",
